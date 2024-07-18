@@ -35,6 +35,24 @@ static class FragmentShaders
         }
         """;
 
+    public const string Texture = 
+        """
+        #version 300 es
+
+        precision highp float;
+
+        uniform sampler2D texture0;
+
+        in vec2 v_texcoord;
+        out vec4 fragColor;
+
+        void main() {
+            vec2 q = v_texcoord;
+            vec4 tcol = texture(texture0, q);
+            fragColor = vec4(tcol.xyz, 1.0);
+        }
+        """;
+
     public const string Fancy = 
         """
         #version 300 es

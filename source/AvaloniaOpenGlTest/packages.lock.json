@@ -26,6 +26,18 @@
           "Avalonia.X11": "11.1.0-rc2"
         }
       },
+      "Avalonia.Diagnostics": {
+        "type": "Direct",
+        "requested": "[11.1.0-rc2, )",
+        "resolved": "11.1.0-rc2",
+        "contentHash": "OlY6hbaaJqPPVVHCxbtJC+n8UlhbPyFmLGZcvy0hkfPunBAID8jGb+lTQWTizoZ4EyHb6RaZLQw4PqUaEoztoQ==",
+        "dependencies": {
+          "Avalonia": "11.1.0-rc2",
+          "Avalonia.Controls.ColorPicker": "11.1.0-rc2",
+          "Avalonia.Controls.DataGrid": "11.1.0-rc2",
+          "Avalonia.Themes.Simple": "11.1.0-rc2"
+        }
+      },
       "Avalonia.Fonts.Inter": {
         "type": "Direct",
         "requested": "[11.1.0-rc2, )",
@@ -69,6 +81,24 @@
         "resolved": "0.0.29",
         "contentHash": "U4eJLQdoDNHXtEba7MZUCwrBErBTxFp6sUewXBOdAhU0Kwzwaa/EKFcYm8kpcysjzKtfB4S0S9n0uxKZFz/ikw=="
       },
+      "Avalonia.Controls.ColorPicker": {
+        "type": "Transitive",
+        "resolved": "11.1.0-rc2",
+        "contentHash": "ps8LrXrYt7islVb7EYolDb9mvFiPeWjjU+OkEPwtvAArfiJRhaPPaNVIC8O/x5dHVIhlZZr6OmlQc0AsufOovg==",
+        "dependencies": {
+          "Avalonia": "11.1.0-rc2",
+          "Avalonia.Remote.Protocol": "11.1.0-rc2"
+        }
+      },
+      "Avalonia.Controls.DataGrid": {
+        "type": "Transitive",
+        "resolved": "11.1.0-rc2",
+        "contentHash": "aimC/Tz0A6zXCsFhXFvZ0YZr6mBRMFyPdPvFYDVHwtUQ81xCvg8BOZ/DDvDoyhjhcZ2/JoLCqy/DgfUAg9noqg==",
+        "dependencies": {
+          "Avalonia": "11.1.0-rc2",
+          "Avalonia.Remote.Protocol": "11.1.0-rc2"
+        }
+      },
       "Avalonia.FreeDesktop": {
         "type": "Transitive",
         "resolved": "11.1.0-rc2",
@@ -90,6 +120,14 @@
         "type": "Transitive",
         "resolved": "11.1.0-rc2",
         "contentHash": "1gvhYp09bnwHt1Rio3AF3zj7/o2pm1Qq6GLB3pAMrfSshBh8hXaXW0phkQ1gW05165AC/w2Xo4L1/gPT8a2hwQ=="
+      },
+      "Avalonia.Themes.Simple": {
+        "type": "Transitive",
+        "resolved": "11.1.0-rc2",
+        "contentHash": "PWg5HNT6V42VUIFI+1JTVazBo55pMkkR9NM7NWPWlGPrUk3kw9AqUWUKpO+Z2nAWyJRcfwOj7zPn/aYs2v2mvA==",
+        "dependencies": {
+          "Avalonia": "11.1.0-rc2"
+        }
       },
       "Avalonia.Win32": {
         "type": "Transitive",
@@ -196,6 +234,12 @@
         "contentHash": "9Ne9AvrRWrDQvzbMcbTz3EaGRE1vQmkeeu0Xp7Ii0Wdlhwfjst8FDRas+RBslU5kdPWs2aeMLErzyT1DwH9zeA==",
         "dependencies": {
           "System.IO.Pipelines": "6.0.0"
+        }
+      },
+      "lib.shadermixer.openglext": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[11.1.0-rc2, )"
         }
       }
     }

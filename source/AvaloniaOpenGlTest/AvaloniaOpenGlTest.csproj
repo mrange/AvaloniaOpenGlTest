@@ -21,4 +21,9 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.0-rc2" />
   </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Avalonia.ShaderMixer\source\Lib.ShaderMixer.OpenGLExt\Lib.ShaderMixer.OpenGLExt.csproj" />
+  </ItemGroup>
 </Project>

@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35005.142
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvaloniaOpenGlTest", "AvaloniaOpenGlTest.csproj", "{46534B83-9555-40D6-A62C-22FB276E68ED}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lib.ShaderMixer.OpenGLExt", "..\..\..\Avalonia.ShaderMixer\source\Lib.ShaderMixer.OpenGLExt\Lib.ShaderMixer.OpenGLExt.csproj", "{7E259393-E695-458E-B9CA-7ADF3C170537}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{46534B83-9555-40D6-A62C-22FB276E68ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46534B83-9555-40D6-A62C-22FB276E68ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46534B83-9555-40D6-A62C-22FB276E68ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E259393-E695-458E-B9CA-7ADF3C170537}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E259393-E695-458E-B9CA-7ADF3C170537}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E259393-E695-458E-B9CA-7ADF3C170537}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E259393-E695-458E-B9CA-7ADF3C170537}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,6 @@
 ﻿
+using Lib.ShaderMixer.OpenGLExt;
+
 namespace AvaloniaOpenGlTest;
 
 class BackgroundControl : Control
@@ -20,6 +22,7 @@ class BackgroundControl : Control
     record struct GlUniformLocation(int UniformLocation);
     record struct GlBufferObject(int Buffer, int Target, int SizeOf);
     record struct GlVertexArrayObject(int VertexArray);
+    record struct GlTexture(int Texture);
 
     class OpenGlState : IDisposable
     {
@@ -30,8 +33,10 @@ class BackgroundControl : Control
         GlProgram           _glProgram              ;
         GlUniformLocation   _glTimeLocation         ;
         GlUniformLocation   _glRatioLocation        ;
+        GlUniformLocation   _glTexture0Location     ;
         GlShader            _glVertexShader         ;
         GlShader            _glFragmentShader       ;
+        GlTexture           _glTexture              ;
 
         static Vertex NewVertex(float x, float y, float z, float u, float v)
         {
@@ -80,7 +85,7 @@ class BackgroundControl : Control
             }
             """;
 
-        const string _fragmentShaderSource = FragmentShaders.Fancy;
+        const string _fragmentShaderSource = FragmentShaders.Texture;
 
         public void Dispose()
         {
@@ -141,7 +146,7 @@ class BackgroundControl : Control
             return new (glBufferObject, target, size);
         }
 
-        public OpenGlState(IGlContext glContext)
+        public unsafe OpenGlState(IGlContext glContext)
         {
             _glContext = glContext;
 
@@ -169,6 +174,7 @@ class BackgroundControl : Control
 
             _glTimeLocation     = new (gl.GetUniformLocationString(_glProgram.Program, "time"));
             _glRatioLocation    = new (gl.GetUniformLocationString(_glProgram.Program, "ratio"));
+            _glTexture0Location = new (gl.GetUniformLocationString(_glProgram.Program, "texture0"));
             CheckGlError(gl);
 
             _glVertexBufferObject   = CreateBuffer(gl, GL_ARRAY_BUFFER          , _vertices);
@@ -200,11 +206,26 @@ class BackgroundControl : Control
             gl.EnableVertexAttribArray(GlPositionLocation);
             gl.EnableVertexAttribArray(GlTexCoordLocation);
             CheckGlError(gl);
+
+            _glTexture = new (gl.GenTexture());
+            gl.BindTexture (GL_TEXTURE_2D, _glTexture.Texture);
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            var rnd = Random.Shared;
+            var bytes = new byte[64*64*4];
+            rnd.NextBytes (bytes);
+            fixed (void* data = bytes)
+            {
+                gl.TexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, new(data));
+            }
+
         }
 
         public void DrawGl(PixelSize size, float renderScaling, float time)
         {
             var gl = _glContext.GlInterface;
+            var glext = new GlInterfaceExt(gl);
 
             var ratio = ((float)size.Width)/((float)size.Height);
 
@@ -227,6 +248,11 @@ class BackgroundControl : Control
 
             gl.Uniform1f(_glTimeLocation.UniformLocation, time);
             gl.Uniform1f(_glRatioLocation.UniformLocation, ratio);
+            gl.ActiveTexture(GL_TEXTURE0);
+            gl.BindTexture(GL_TEXTURE_2D, _glTexture.Texture);
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glext.Uniform1i (_glTexture0Location.UniformLocation, 0);
 
             CheckGlError(gl);
             gl.DrawElements(GL_TRIANGLES, _indices.Length, GL_UNSIGNED_SHORT, IntPtr.Zero);
