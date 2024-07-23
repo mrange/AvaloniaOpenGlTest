@@ -19,11 +19,7 @@ class BackgroundControl : Control
 
     class DisposeMessage { }
 
-    record struct GlShader(int Shader);
     record struct GlProgram(int Program);
-    record struct GlUniformLocation(int UniformLocation);
-    record struct GlBufferObject(int Buffer, int Target, int SizeOf);
-    record struct GlVertexArrayObject(int VertexArray);
     record struct GlTexture(int Texture);
 
     class OpenGlState : IDisposable
@@ -33,63 +29,8 @@ class BackgroundControl : Control
         OpenGlDebugMode     _glDebugMode            ;
 #endif
 
-        GlBufferObject      _glVertexBufferObject   ;
-        GlBufferObject      _glIndexBufferObject    ;
-        GlVertexArrayObject _glVertexArrayObject    ;
         GlProgram           _glProgram              ;
-        GlUniformLocation   _glTimeLocation         ;
-        GlUniformLocation   _glRatioLocation        ;
-        GlUniformLocation   _glTexture0Location     ;
-        GlShader            _glVertexShader         ;
-        GlShader            _glFragmentShader       ;
         GlTexture           _glTexture              ;
-
-        static Vertex NewVertex(float x, float y, float z, float u, float v)
-        {
-            return new ()
-            {
-                Position = new (x,y,z)
-            ,   TexCoord = new(u,v)
-            };
-        }
-
-        const int GlPositionLocation = 0;
-        const int GlTexCoordLocation = 1;
-
-        readonly Vertex[] _vertices = 
-            [
-                NewVertex(-1, -1, 0, 0, 1)
-            ,   NewVertex( 1, -1, 0, 1, 1)
-            ,   NewVertex(-1,  1, 0, 0, 0)
-            ,   NewVertex( 1,  1, 0, 1, 0)
-            ]; 
-
-        readonly ushort[] _indices = 
-            [
-                0
-            ,   1
-            ,   2
-            ,   1
-            ,   3
-            ,   2
-            ]; 
-
-        const string _vertexShaderSource = 
-            """
-            #version 300 es
-
-            precision highp float;
-
-            in vec4 a_position;
-            in vec2 a_texcoord;
-
-            out vec2 v_texcoord;
-
-            void main() {
-              gl_Position = a_position;
-              v_texcoord = a_texcoord;
-            }
-            """;
 
         const string _fragmentShaderSource = FragmentShaders.Texture;
 
@@ -115,72 +56,18 @@ class BackgroundControl : Control
         {
             var gl      = _glContext.GlInterface;
 
-            gl.BindBuffer(GL_ARRAY_BUFFER, 0);
-            CheckError();
-
-            gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-            CheckError();
-
-            gl.BindVertexArray(0);
+            gl.BindTexture(GL_TEXTURE_2D, 0);
             CheckError();
 
             gl.UseProgram(0);
             CheckError();
 
-            gl.DeleteVertexArray(_glVertexArrayObject.VertexArray);
-            CheckError();
-
-            gl.DeleteBuffer(_glIndexBufferObject.Buffer);
-            CheckError();
-
-            gl.DeleteBuffer(_glVertexBufferObject.Buffer);;
-            CheckError();
-
             gl.DeleteProgram(_glProgram.Program);
-            CheckError();
-
-            gl.DeleteShader(_glFragmentShader.Shader);
-            CheckError();
-
-            gl.DeleteShader(_glVertexShader.Shader);
             CheckError();
 
 #if DEBUG
             _glDebugMode.Dispose ();
 #endif
-        }
-
-        GlShader CompileShader(GlInterface gl, int glEnum, string source)
-        {
-            var glShader = gl.CreateShader(glEnum);
-            CheckError();
-
-            var error = gl.CompileShaderAndGetError(glShader, source);
-            if (error is not null)
-            {
-                throw new Exception($"While compiling shader: {error}");
-            }
-            return new (glShader);
-        }
-
-        unsafe GlBufferObject CreateBuffer<T>(GlInterface gl, int target, T[] data)
-            where T : unmanaged
-        {
-            var glBufferObject = gl.GenBuffer();
-            gl.BindBuffer(target, glBufferObject);
-            CheckError();
-            var size = sizeof(T);
-            fixed (void* ptr = data)
-            {
-                gl.BufferData(
-                        target
-                    ,   data.Length*size
-                    ,   new(ptr)
-                    ,   GL_STATIC_DRAW
-                    );
-            }
-            CheckError();
-            return new (glBufferObject, target, size);
         }
 
         public unsafe OpenGlState(IGlContext glContext)
@@ -215,79 +102,11 @@ class BackgroundControl : Control
             CheckError();
 #endif
 
-            _glVertexShader     = CompileShader(gl, GL_VERTEX_SHADER, _vertexShaderSource);
-            _glFragmentShader   = CompileShader(gl, GL_FRAGMENT_SHADER, _fragmentShaderSource);
-
-            _glProgram          = new (gl.CreateProgram());
-            CheckError();
-
-            gl.AttachShader(_glProgram.Program, _glVertexShader.Shader);
-            CheckError();
-
-            gl.AttachShader(_glProgram.Program, _glFragmentShader.Shader);
-            CheckError();
-
-
-            gl.BindAttribLocationString(_glProgram.Program, GlPositionLocation , "a_position");
-            CheckError();
-
-            gl.BindAttribLocationString(_glProgram.Program, GlTexCoordLocation , "a_texcoord");
-            CheckError();
-
-
-            var error = gl.LinkProgramAndGetError(_glProgram.Program);
-            if (error is not null)
-            {
-                throw new Exception($"While linking shader program: {error}");
-            }
-            CheckError();
-
-            _glTimeLocation     = new (gl.GetUniformLocationString(_glProgram.Program, "time"));
-            CheckError();
-
-            _glRatioLocation    = new (gl.GetUniformLocationString(_glProgram.Program, "ratio"));
-            CheckError();
-
-            _glTexture0Location = new (gl.GetUniformLocationString(_glProgram.Program, "texture0"));
-            CheckError();
-
-            _glVertexBufferObject   = CreateBuffer(gl, GL_ARRAY_BUFFER          , _vertices);
-            CheckError();
-
-            _glIndexBufferObject    = CreateBuffer(gl, GL_ELEMENT_ARRAY_BUFFER  , _indices);
-            CheckError();
-
-            _glVertexArrayObject = new (gl.GenVertexArray());
-            gl.BindVertexArray(_glVertexArrayObject.VertexArray);
-            CheckError();
-
-            gl.VertexAttribPointer(
-                    GlPositionLocation
-                ,   3
-                ,   GL_FLOAT
-                ,   0
-                ,   _glVertexBufferObject.SizeOf
-                ,   0
-                );
-            CheckError();
-
-            gl.VertexAttribPointer(
-                    GlTexCoordLocation
-                ,   2
-                ,   GL_FLOAT
-                ,   0
-                ,   _glVertexBufferObject.SizeOf
-                ,   12
-                );
-            CheckError();
-
-            gl.EnableVertexAttribArray(GlPositionLocation);
-            CheckError();
-
-            gl.EnableVertexAttribArray(GlTexCoordLocation);
+            _glProgram = new (glext.CreateShaderProgramv(GL_FRAGMENT_SHADER, _fragmentShaderSource));
             CheckError();
 
             _glTexture = new (gl.GenTexture());
+
             gl.BindTexture (GL_TEXTURE_2D, _glTexture.Texture);
             CheckError();
 
@@ -301,18 +120,6 @@ class BackgroundControl : Control
                 gl.TexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, new(data));
             }
             CheckError();
-
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            CheckError();
-
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            CheckError();
-
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            CheckError();
-
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            CheckError();
         }
 
         public void DrawGl(PixelSize size, float renderScaling, float time)
@@ -322,11 +129,11 @@ class BackgroundControl : Control
 
             var ratio = ((float)size.Width)/((float)size.Height);
 
-            /*
             gl.ClearColor(1, 0, 0, 1);
             gl.Clear(GL_COLOR_BUFFER_BIT);
-            */
+            CheckError();
 
+            /*
             gl.Viewport(
                     0
                 ,   0
@@ -334,29 +141,12 @@ class BackgroundControl : Control
                 ,   (int)(size.Height*renderScaling)
                 );
             CheckError();
-
-            gl.BindBuffer(_glVertexBufferObject.Target, _glVertexBufferObject.Buffer);
-            CheckError();
-
-            gl.BindBuffer(_glIndexBufferObject.Target, _glIndexBufferObject.Buffer);
-            CheckError();
-
-            gl.BindVertexArray(_glVertexArrayObject.VertexArray);
-            CheckError();
-
-            gl.UseProgram(_glProgram.Program);
-            CheckError();
-
-            gl.Uniform1f(_glTimeLocation.UniformLocation, time);
-            CheckError();
-
-            gl.Uniform1f(_glRatioLocation.UniformLocation, ratio);
-            CheckError();
+            */
 
             gl.ActiveTexture(GL_TEXTURE0);
             CheckError();
 
-            gl.BindTexture(GL_TEXTURE_2D, _glTexture.Texture);
+            gl.BindTexture (GL_TEXTURE_2D, _glTexture.Texture);
             CheckError();
 
             gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -371,10 +161,16 @@ class BackgroundControl : Control
             gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
             CheckError();
 
-            glext.Uniform1i (_glTexture0Location.UniformLocation, 0);
+            gl.UseProgram(_glProgram.Program);
             CheckError();
 
-            gl.DrawElements(GL_TRIANGLES, _indices.Length, GL_UNSIGNED_SHORT, IntPtr.Zero);
+            glext.Uniform2f (0, size.Width, size.Height);
+            CheckError();
+
+            glext.Uniform1i(1, 0);
+            CheckError();
+
+            glext.Rects(-1,-1,1,1);
         }
 
         public bool HasSameContext(IGlContext glContext)

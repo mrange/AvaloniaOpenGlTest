@@ -17,7 +17,7 @@
                         ],
                         WglProfiles = 
                         [
-                            new(GlProfileType.OpenGL, 4, 5)
+                            new(GlProfileType.OpenGL, 4, 5, true)
                         ],
                         CompositionMode =
                         [
