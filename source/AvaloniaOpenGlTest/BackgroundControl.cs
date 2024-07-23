@@ -1,6 +1,8 @@
 ﻿
 using Lib.ShaderMixer.OpenGLExt;
 
+using static Lib.ShaderMixer.OpenGLExt.GlConstsExt;
+
 namespace AvaloniaOpenGlTest;
 
 class BackgroundControl : Control
@@ -27,6 +29,10 @@ class BackgroundControl : Control
     class OpenGlState : IDisposable
     {
         IGlContext          _glContext              ;
+#if DEBUG
+        OpenGlDebugMode     _glDebugMode            ;
+#endif
+
         GlBufferObject      _glVertexBufferObject   ;
         GlBufferObject      _glIndexBufferObject    ;
         GlVertexArrayObject _glVertexArrayObject    ;
@@ -87,37 +93,68 @@ class BackgroundControl : Control
 
         const string _fragmentShaderSource = FragmentShaders.Texture;
 
-        public void Dispose()
+        void CheckError()
         {
             var gl = _glContext.GlInterface;
-
-            gl.BindBuffer(GL_ARRAY_BUFFER, 0);
-            gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-            gl.BindVertexArray(0);
-            gl.UseProgram(0);
-
-            gl.DeleteVertexArray(_glVertexArrayObject.VertexArray);
-            gl.DeleteBuffer(_glIndexBufferObject.Buffer);
-            gl.DeleteBuffer(_glVertexBufferObject.Buffer);;
-            gl.DeleteProgram(_glProgram.Program);
-            gl.DeleteShader(_glFragmentShader.Shader);
-            gl.DeleteShader(_glVertexShader.Shader);
-
-            // _glContext.Dispose();
-        }
-
-        void CheckGlError(GlInterface gl)
-        {
-            var err = gl.GetError();
-            if (err != GL_NO_ERROR)
-            {
-                throw new Exception($"GL Error state: {err}");
+            int err;
+            while ((err = gl.GetError()) != GL_NO_ERROR) {
+                throw new Exception($"Oops: {err}");
             }
         }
-        
+
+        void IgnoreError()
+        {
+            var gl = _glContext.GlInterface;
+            int err;
+            while ((err = gl.GetError()) != GL_NO_ERROR) {
+                // Just spin until all errors are gone
+            }
+        }
+
+        public void Dispose()
+        {
+            var gl      = _glContext.GlInterface;
+
+            gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+            CheckError();
+
+            gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+            CheckError();
+
+            gl.BindVertexArray(0);
+            CheckError();
+
+            gl.UseProgram(0);
+            CheckError();
+
+            gl.DeleteVertexArray(_glVertexArrayObject.VertexArray);
+            CheckError();
+
+            gl.DeleteBuffer(_glIndexBufferObject.Buffer);
+            CheckError();
+
+            gl.DeleteBuffer(_glVertexBufferObject.Buffer);;
+            CheckError();
+
+            gl.DeleteProgram(_glProgram.Program);
+            CheckError();
+
+            gl.DeleteShader(_glFragmentShader.Shader);
+            CheckError();
+
+            gl.DeleteShader(_glVertexShader.Shader);
+            CheckError();
+
+#if DEBUG
+            _glDebugMode.Dispose ();
+#endif
+        }
+
         GlShader CompileShader(GlInterface gl, int glEnum, string source)
         {
             var glShader = gl.CreateShader(glEnum);
+            CheckError();
+
             var error = gl.CompileShaderAndGetError(glShader, source);
             if (error is not null)
             {
@@ -131,7 +168,7 @@ class BackgroundControl : Control
         {
             var glBufferObject = gl.GenBuffer();
             gl.BindBuffer(target, glBufferObject);
-            CheckGlError(gl);
+            CheckError();
             var size = sizeof(T);
             fixed (void* ptr = data)
             {
@@ -142,48 +179,87 @@ class BackgroundControl : Control
                     ,   GL_STATIC_DRAW
                     );
             }
-            CheckGlError(gl);
+            CheckError();
             return new (glBufferObject, target, size);
         }
 
         public unsafe OpenGlState(IGlContext glContext)
         {
             _glContext = glContext;
+            CheckError();
 
             var gl = glContext.GlInterface;
 
-            CheckGlError(gl);
+#if DEBUG
+            var glVersion           = gl.GetString(GL_VERSION);
+            var glRenderer          = gl.GetString(GL_RENDERER);
+            var glVendor            = gl.GetString(GL_VENDOR);
+            var glShaderLangVersion = gl.GetString(GL_SHADING_LANGUAGE_VERSION);
+
+            var exts = new StringBuilder($"Initialized OpenGL with Version={glVersion}, Renderer={glRenderer}, Vendor={glVendor}, Shader lang version={glShaderLangVersion}, Extensions=");
+            string? ext;
+            int exti = 0;
+            while ((ext = gl.GetString(GL_EXTENSIONS, exti)) is not null)
+            {
+                exts.Append(ext).Append(",");
+                ++exti;
+            }
+            Debug.WriteLine(exts.ToString());
+
+            IgnoreError();
+#endif
+
+#if DEBUG
+            var glext = new GlInterfaceExt(gl);
+            _glDebugMode = new OpenGlDebugMode (gl, glext);
+            CheckError();
+#endif
 
             _glVertexShader     = CompileShader(gl, GL_VERTEX_SHADER, _vertexShaderSource);
             _glFragmentShader   = CompileShader(gl, GL_FRAGMENT_SHADER, _fragmentShaderSource);
 
             _glProgram          = new (gl.CreateProgram());
+            CheckError();
 
             gl.AttachShader(_glProgram.Program, _glVertexShader.Shader);
+            CheckError();
+
             gl.AttachShader(_glProgram.Program, _glFragmentShader.Shader);
+            CheckError();
+
 
             gl.BindAttribLocationString(_glProgram.Program, GlPositionLocation , "a_position");
+            CheckError();
+
             gl.BindAttribLocationString(_glProgram.Program, GlTexCoordLocation , "a_texcoord");
+            CheckError();
+
 
             var error = gl.LinkProgramAndGetError(_glProgram.Program);
             if (error is not null)
             {
                 throw new Exception($"While linking shader program: {error}");
             }
-            CheckGlError(gl);
+            CheckError();
 
             _glTimeLocation     = new (gl.GetUniformLocationString(_glProgram.Program, "time"));
+            CheckError();
+
             _glRatioLocation    = new (gl.GetUniformLocationString(_glProgram.Program, "ratio"));
+            CheckError();
+
             _glTexture0Location = new (gl.GetUniformLocationString(_glProgram.Program, "texture0"));
-            CheckGlError(gl);
+            CheckError();
 
             _glVertexBufferObject   = CreateBuffer(gl, GL_ARRAY_BUFFER          , _vertices);
+            CheckError();
+
             _glIndexBufferObject    = CreateBuffer(gl, GL_ELEMENT_ARRAY_BUFFER  , _indices);
-            CheckGlError(gl);
+            CheckError();
 
             _glVertexArrayObject = new (gl.GenVertexArray());
             gl.BindVertexArray(_glVertexArrayObject.VertexArray);
-            CheckGlError(gl);
+            CheckError();
 
             gl.VertexAttribPointer(
                     GlPositionLocation
@@ -193,6 +269,8 @@ class BackgroundControl : Control
                 ,   _glVertexBufferObject.SizeOf
                 ,   0
                 );
+            CheckError();
+
             gl.VertexAttribPointer(
                     GlTexCoordLocation
                 ,   2
@@ -201,25 +279,40 @@ class BackgroundControl : Control
                 ,   _glVertexBufferObject.SizeOf
                 ,   12
                 );
-            CheckGlError(gl);
+            CheckError();
 
             gl.EnableVertexAttribArray(GlPositionLocation);
+            CheckError();
+
             gl.EnableVertexAttribArray(GlTexCoordLocation);
-            CheckGlError(gl);
+            CheckError();
 
             _glTexture = new (gl.GenTexture());
             gl.BindTexture (GL_TEXTURE_2D, _glTexture.Texture);
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            CheckError();
 
             var rnd = Random.Shared;
-            var bytes = new byte[64*64*4];
+            const int NoOfPoints = 64*64;
+            var bytes = new byte[NoOfPoints*4];
             rnd.NextBytes (bytes);
+
             fixed (void* data = bytes)
             {
                 gl.TexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, new(data));
             }
+            CheckError();
 
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            CheckError();
         }
 
         public void DrawGl(PixelSize size, float renderScaling, float time)
@@ -240,21 +333,47 @@ class BackgroundControl : Control
                 ,   (int)(size.Width*renderScaling)
                 ,   (int)(size.Height*renderScaling)
                 );
+            CheckError();
 
             gl.BindBuffer(_glVertexBufferObject.Target, _glVertexBufferObject.Buffer);
+            CheckError();
+
             gl.BindBuffer(_glIndexBufferObject.Target, _glIndexBufferObject.Buffer);
+            CheckError();
+
             gl.BindVertexArray(_glVertexArrayObject.VertexArray);
+            CheckError();
+
             gl.UseProgram(_glProgram.Program);
+            CheckError();
 
             gl.Uniform1f(_glTimeLocation.UniformLocation, time);
-            gl.Uniform1f(_glRatioLocation.UniformLocation, ratio);
-            gl.ActiveTexture(GL_TEXTURE0);
-            gl.BindTexture(GL_TEXTURE_2D, _glTexture.Texture);
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glext.Uniform1i (_glTexture0Location.UniformLocation, 0);
+            CheckError();
 
-            CheckGlError(gl);
+            gl.Uniform1f(_glRatioLocation.UniformLocation, ratio);
+            CheckError();
+
+            gl.ActiveTexture(GL_TEXTURE0);
+            CheckError();
+
+            gl.BindTexture(GL_TEXTURE_2D, _glTexture.Texture);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            CheckError();
+
+            gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            CheckError();
+
+            glext.Uniform1i (_glTexture0Location.UniformLocation, 0);
+            CheckError();
+
             gl.DrawElements(GL_TRIANGLES, _indices.Length, GL_UNSIGNED_SHORT, IntPtr.Zero);
         }
 

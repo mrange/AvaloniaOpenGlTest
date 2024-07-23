@@ -40,6 +40,7 @@ static class FragmentShaders
         #version 300 es
 
         precision highp float;
+        precision highp sampler2D;
 
         uniform sampler2D texture0;
 
@@ -47,7 +48,7 @@ static class FragmentShaders
         out vec4 fragColor;
 
         void main() {
-            vec2 q = v_texcoord;
+            vec2 q = v_texcoord*2.;
             vec4 tcol = texture(texture0, q);
             fragColor = vec4(tcol.xyz, 1.0);
         }
